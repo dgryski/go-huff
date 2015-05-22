@@ -3,8 +3,6 @@ package huff
 import (
 	"bytes"
 	"testing"
-
-	"gopkg.in/bufio.v1"
 )
 
 func TestHuff(t *testing.T) {
@@ -13,7 +11,7 @@ func TestHuff(t *testing.T) {
 
 	e := NewEncoder(counts)
 
-	var buf bufio.Buffer
+	var buf bytes.Buffer
 
 	w := e.Writer(&buf)
 
