@@ -48,7 +48,9 @@ func NewEncoder(counts []int) *Encoder {
 	var n nodes
 
 	for i, v := range counts {
-		heap.Push(&n, node{weight: v, leaf: true, sym: uint32(i)})
+		if v != 0 {
+			heap.Push(&n, node{weight: v, leaf: true, sym: uint32(i)})
+		}
 	}
 
 	// one more for EOF
