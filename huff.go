@@ -112,18 +112,19 @@ func (w *Writer) WriteSymbol(s uint32) error {
 type Decoder struct {
 	*bitstream.BitReader
 	m      []symbol
-	codes  map[uint32]uint32
+	codes  map[uint64]uint32
 	eof    uint32
 	maxlen int
 }
 
 func (e *Encoder) Decoder(r io.Reader) *Decoder {
-	codes := make(map[uint32]uint32)
+	codes := make(map[uint64]uint32)
 
 	var max int
 
 	for i, sym := range e.m {
-		codes[sym.Code] = uint32(i)
+		l := uint64(sym.Len)<<56 + uint64(sym.Code)
+		codes[l] = uint32(i)
 		if sym.Len > max {
 			max = sym.Len
 		}
@@ -152,7 +153,8 @@ func (d *Decoder) ReadSymbol() (uint32, error) {
 			c |= 1
 		}
 
-		if s, ok := d.codes[c]; ok {
+		l := uint64(i+1)<<56 + uint64(c)
+		if s, ok := d.codes[l]; ok {
 			if s == d.eof {
 				s = EOF
 			}
