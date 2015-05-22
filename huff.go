@@ -60,7 +60,7 @@ func NewEncoder(counts []int) *Encoder {
 	for n.Len() > 1 {
 		n1 := heap.Pop(&n).(node)
 		n2 := heap.Pop(&n).(node)
-		heap.Push(&n, node{weight: n1.weight + n2.weight, child: [2]*node{&n1, &n2}})
+		heap.Push(&n, node{weight: n1.weight + n2.weight, child: [2]*node{&n2, &n1}})
 	}
 
 	m := make([]symbol, eof+1)
