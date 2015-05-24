@@ -2,57 +2,58 @@ package huff
 
 import (
 	"bytes"
+	"io"
+	"io/ioutil"
 	"testing"
 )
 
-func TestHuff(t *testing.T) {
+func TestRoundtrip(t *testing.T) {
 
-	counts := []int{3, 1, 4, 1, 5, 9}
+	data, err := ioutil.ReadFile("/usr/share/dict/words")
+	if err != nil {
+		t.Skip("unable to open words file")
+	}
+
+	counts := make([]int, 256)
+
+	for _, v := range data {
+		counts[v]++
+	}
 
 	e := NewEncoder(counts)
 
-	var buf bytes.Buffer
+	t.Log(e)
 
-	w := e.Writer(&buf)
+	var b bytes.Buffer
 
-	stream := []uint32{5, 3, 1, 1, 3}
+	w := e.Writer(&b)
 
-	for i := range stream {
-		w.WriteSymbol(stream[i])
-		w.WriteBits(uint64(0xfff), int(stream[i]))
+	for _, v := range data {
+		w.WriteSymbol(uint32(v))
 	}
-
 	w.WriteSymbol(EOF)
-	w.Flush(false)
 
-	d := e.Decoder(bytes.NewReader(buf.Bytes()))
+	compressed := b.Bytes()
 
-	var i int
-	var foundEOF bool
+	t.Logf("%d -> %d\n", len(data), len(compressed))
+
+	d := e.Decoder(bytes.NewReader(compressed))
+
+	var uncompressed []byte
+
 	for {
-		s, err := d.ReadSymbol()
+		b, err := d.ReadSymbol()
+		if b == EOF || err == io.EOF {
+			break
+		}
+		uncompressed = append(uncompressed, byte(b))
 		if err != nil {
+			t.Errorf("err = %+v\n", err)
 			break
 		}
-		if s == EOF {
-			foundEOF = true
-			break
-		}
-		if i >= len(stream) {
-			break
-		}
-		if s != stream[i] {
-			t.Errorf("stream index %d = %d, want %d", i, s, stream[i])
-		}
-		b, _ := d.ReadBits(int(s))
-		want := uint64(1<<s) - 1
-		if b != want {
-			t.Errorf("stream item %d = %x, want %x", i, b, want)
-		}
-		i++
 	}
 
-	if !foundEOF {
-		t.Errorf("did not find expected EOF token")
+	if !bytes.Equal(data, uncompressed) {
+		t.Errorf("bytes compare found mismatch")
 	}
 }
