@@ -5,6 +5,7 @@ import (
 	"container/heap"
 	"errors"
 	"io"
+	"sort"
 
 	"github.com/dgryski/go-bitstream"
 )
@@ -44,6 +45,14 @@ func (n *nodes) Pop() interface{} {
 	return x
 }
 
+type symptrs []*symbol
+
+func (s symptrs) Len() int      { return len(s) }
+func (s symptrs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s symptrs) Less(i, j int) bool {
+	return s[i].Len < s[j].Len || s[i].Len == s[j].Len && s[i].s < s[j].s
+}
+
 func NewEncoder(counts []int) *Encoder {
 	var n nodes
 
@@ -63,22 +72,38 @@ func NewEncoder(counts []int) *Encoder {
 		heap.Push(&n, node{weight: n1.weight + n2.weight, child: [2]*node{&n2, &n1}})
 	}
 
+	var sptrs symptrs
+
 	m := make([]symbol, eof+1)
 
-	walk(&n[0], 0, 0, m)
+	walk(&n[0], 0, 0, m, &sptrs)
+
+	sort.Sort(sptrs)
+
+	var code uint32
+	prevlen := -1
+	for i := range sptrs {
+		if sptrs[i].Len > prevlen {
+			code <<= uint(sptrs[i].Len - prevlen)
+			prevlen = sptrs[i].Len
+		}
+		sptrs[i].Code = code
+		code++
+	}
 
 	return &Encoder{eof: eof, m: m}
 }
 
-func walk(n *node, code uint32, depth int, m []symbol) {
+func walk(n *node, code uint32, depth int, m []symbol, sptrs *symptrs) {
 
 	if n.leaf {
-		m[n.sym] = symbol{s: n.sym, Code: code, Len: depth}
+		m[n.sym] = symbol{s: n.sym, Len: depth}
+		*sptrs = append(*sptrs, &m[n.sym])
 		return
 	}
 
-	walk(n.child[0], code<<1, depth+1, m)
-	walk(n.child[1], (code<<1)|1, depth+1, m)
+	walk(n.child[0], code<<1, depth+1, m, sptrs)
+	walk(n.child[1], (code<<1)|1, depth+1, m, sptrs)
 }
 
 func (e *Encoder) Writer(w io.Writer) *Writer {
