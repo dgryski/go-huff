@@ -106,6 +106,15 @@ func walk(n *node, code uint32, depth int, m []symbol, sptrs *symptrs) {
 	walk(n.child[1], (code<<1)|1, depth+1, m, sptrs)
 }
 
+func (e *Encoder) SymbolLen(s uint32) int {
+
+	if s == EOF {
+		s = e.eof
+	}
+
+	return e.m[s].Len
+}
+
 func (e *Encoder) Writer(w io.Writer) *Writer {
 	return &Writer{e: e, BitWriter: bitstream.NewWriter(w)}
 }
@@ -117,21 +126,21 @@ type Writer struct {
 
 var ErrUnknownSymbol = errors.New("huff: unknown symbol")
 
-func (w *Writer) WriteSymbol(s uint32) error {
+func (w *Writer) WriteSymbol(s uint32) (int, error) {
 
 	if s == EOF {
 		s = w.e.eof
 	}
 
 	if s > w.e.eof {
-		return ErrUnknownSymbol
+		return 0, ErrUnknownSymbol
 	}
 
 	sym := w.e.m[s]
 
 	w.BitWriter.WriteBits(uint64(sym.Code), sym.Len)
 
-	return nil
+	return sym.Len, nil
 }
 
 type Decoder struct {
