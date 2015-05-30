@@ -19,8 +19,10 @@ type symbol struct {
 }
 
 type Encoder struct {
-	eof uint32
-	m   []symbol
+	eof  uint32
+	m    []symbol
+	sym  symptrs
+	numl []uint32
 }
 
 type node struct {
@@ -81,17 +83,19 @@ func NewEncoder(counts []int) *Encoder {
 	sort.Sort(sptrs)
 
 	var code uint32
+	numl := make([]uint32, sptrs[len(sptrs)-1].Len+1)
 	prevlen := -1
 	for i := range sptrs {
 		if sptrs[i].Len > prevlen {
 			code <<= uint(sptrs[i].Len - prevlen)
 			prevlen = sptrs[i].Len
 		}
+		numl[sptrs[i].Len]++
 		sptrs[i].Code = code
 		code++
 	}
 
-	return &Encoder{eof: eof, m: m}
+	return &Encoder{eof: eof, m: m, sym: sptrs, numl: numl}
 }
 
 func walk(n *node, code uint32, depth int, m []symbol, sptrs *symptrs) {
@@ -145,50 +149,42 @@ func (w *Writer) WriteSymbol(s uint32) (int, error) {
 
 type Decoder struct {
 	*bitstream.BitReader
-	m      []symbol
-	codes  map[uint64]uint32
-	eof    uint32
-	maxlen int
+	m    []symbol
+	eof  uint32
+	numl []uint32
+	sym  []*symbol
 }
 
 func (e *Encoder) Decoder(r io.Reader) *Decoder {
-	codes := make(map[uint64]uint32)
-
-	var max int
-
-	for i, sym := range e.m {
-		l := uint64(sym.Len)<<56 + uint64(sym.Code)
-		codes[l] = uint32(i)
-		if sym.Len > max {
-			max = sym.Len
-		}
-	}
-
 	return &Decoder{
 		BitReader: bitstream.NewReader(r),
 		m:         e.m,
-		codes:     codes,
 		eof:       e.eof,
-		maxlen:    max,
+		numl:      e.numl,
+		sym:       e.sym,
 	}
 }
 
 func (d *Decoder) ReadSymbol() (uint32, error) {
-	var c uint32
+	var offset uint32
+	var code uint32
 
-	for i := 0; i < d.maxlen; i++ {
+	for i := 0; i < len(d.numl); i++ {
 		b, err := d.ReadBit()
 		if err != nil {
 			return 0, err
 		}
 
-		c <<= 1
+		code <<= 1
 		if b {
-			c |= 1
+			code |= 1
 		}
 
-		l := uint64(i+1)<<56 + uint64(c)
-		if s, ok := d.codes[l]; ok {
+		offset += d.numl[i]
+		first := d.sym[offset].Code
+
+		if code-first < d.numl[i+1] {
+			s := d.sym[code-first+offset].s
 			if s == d.eof {
 				s = EOF
 			}
