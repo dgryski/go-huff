@@ -18,13 +18,6 @@ type symbol struct {
 	Len  int
 }
 
-type Encoder struct {
-	eof  uint32
-	m    []symbol
-	sym  symptrs
-	numl []uint32
-}
-
 type node struct {
 	weight int
 	child  [2]*node
@@ -53,6 +46,13 @@ func (s symptrs) Len() int      { return len(s) }
 func (s symptrs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s symptrs) Less(i, j int) bool {
 	return s[i].Len < s[j].Len || s[i].Len == s[j].Len && s[i].s < s[j].s
+}
+
+type Encoder struct {
+	eof  uint32
+	m    []symbol
+	sym  symptrs
+	numl []uint32
 }
 
 func NewEncoder(counts []int) *Encoder {
