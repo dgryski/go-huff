@@ -2,7 +2,9 @@
 package huff
 
 import (
+	"bytes"
 	"container/heap"
+	"encoding/binary"
 	"errors"
 	"io"
 	"sort"
@@ -43,6 +45,47 @@ func (c codebook) calculateCodes() (symptrs, []uint32) {
 	}
 
 	return sptrs, numl
+}
+
+func (c codebook) MarshalBinary() ([]byte, error) {
+	var b []byte
+
+	var vbuf [binary.MaxVarintLen32]byte
+
+	l := binary.PutVarint(vbuf[:], int64(len(c)))
+	b = append(b, vbuf[:l]...)
+
+	for i := range c {
+		l := binary.PutVarint(vbuf[:], int64(c[i].Len))
+		b = append(b, vbuf[:l]...)
+	}
+
+	return b, nil
+}
+
+var ErrInvalidCodebook = errors.New("huff: invalid codebook")
+
+func (c *codebook) UnmarshalBinary(data []byte) error {
+	r := bytes.NewReader(data)
+
+	l, err := binary.ReadVarint(r)
+	if err != nil {
+		return ErrInvalidCodebook
+	}
+
+	// TODO(dgryski): sanity check `l`
+
+	*c = make(codebook, l)
+
+	for i := uint32(0); i < uint32(l); i++ {
+		clen, err := binary.ReadVarint(r)
+		if err != nil {
+			return ErrInvalidCodebook
+		}
+		(*c)[i] = symbol{s: i, Len: int(clen)}
+	}
+
+	return nil
 }
 
 type node struct {
