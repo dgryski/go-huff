@@ -52,11 +52,11 @@ func (c codebook) MarshalBinary() ([]byte, error) {
 
 	var vbuf [binary.MaxVarintLen32]byte
 
-	l := binary.PutVarint(vbuf[:], int64(len(c)))
+	l := binary.PutUvarint(vbuf[:], uint64(len(c)))
 	b = append(b, vbuf[:l]...)
 
 	for i := range c {
-		l := binary.PutVarint(vbuf[:], int64(c[i].length))
+		l := binary.PutUvarint(vbuf[:], uint64(c[i].length))
 		b = append(b, vbuf[:l]...)
 	}
 
@@ -68,7 +68,7 @@ var ErrInvalidCodebook = errors.New("huff: invalid codebook")
 func (c *codebook) UnmarshalBinary(data []byte) error {
 	r := bytes.NewReader(data)
 
-	l, err := binary.ReadVarint(r)
+	l, err := binary.ReadUvarint(r)
 	if err != nil {
 		return ErrInvalidCodebook
 	}
@@ -78,7 +78,7 @@ func (c *codebook) UnmarshalBinary(data []byte) error {
 	*c = make(codebook, l)
 
 	for i := uint32(0); i < uint32(l); i++ {
-		clen, err := binary.ReadVarint(r)
+		clen, err := binary.ReadUvarint(r)
 		if err != nil {
 			return ErrInvalidCodebook
 		}
