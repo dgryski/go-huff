@@ -74,12 +74,15 @@ func NewEncoder(counts []int) *Encoder {
 		heap.Push(&n, node{weight: n1.weight + n2.weight, child: [2]*node{&n2, &n1}})
 	}
 
-	var sptrs symptrs
-
 	m := make([]symbol, eof+1)
+	walk(&n[0], 0, m)
 
-	walk(&n[0], 0, m, &sptrs)
-
+	var sptrs symptrs
+	for i := range m {
+		if m[i].Len != 0 {
+			sptrs = append(sptrs, &m[i])
+		}
+	}
 	sort.Sort(sptrs)
 
 	var code uint32
@@ -98,16 +101,15 @@ func NewEncoder(counts []int) *Encoder {
 	return &Encoder{eof: eof, m: m, sym: sptrs, numl: numl}
 }
 
-func walk(n *node, depth int, m []symbol, sptrs *symptrs) {
+func walk(n *node, depth int, m []symbol) {
 
 	if n.leaf {
 		m[n.sym] = symbol{s: n.sym, Len: depth}
-		*sptrs = append(*sptrs, &m[n.sym])
 		return
 	}
 
-	walk(n.child[0], depth+1, m, sptrs)
-	walk(n.child[1], depth+1, m, sptrs)
+	walk(n.child[0], depth+1, m)
+	walk(n.child[1], depth+1, m)
 }
 
 func (e *Encoder) SymbolLen(s uint32) int {
