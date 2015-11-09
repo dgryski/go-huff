@@ -205,7 +205,7 @@ func (w *Writer) WriteSymbol(s uint32) (int, error) {
 
 	sym := w.e.m[s]
 
-	w.BitWriter.WriteBits(uint64(sym.Code), sym.Len)
+	w.WriteBits(uint64(sym.Code), sym.Len)
 
 	return sym.Len, nil
 }
