@@ -78,7 +78,7 @@ func NewEncoder(counts []int) *Encoder {
 
 	m := make([]symbol, eof+1)
 
-	walk(&n[0], 0, 0, m, &sptrs)
+	walk(&n[0], 0, m, &sptrs)
 
 	sort.Sort(sptrs)
 
@@ -98,7 +98,7 @@ func NewEncoder(counts []int) *Encoder {
 	return &Encoder{eof: eof, m: m, sym: sptrs, numl: numl}
 }
 
-func walk(n *node, code uint32, depth int, m []symbol, sptrs *symptrs) {
+func walk(n *node, depth int, m []symbol, sptrs *symptrs) {
 
 	if n.leaf {
 		m[n.sym] = symbol{s: n.sym, Len: depth}
@@ -106,8 +106,8 @@ func walk(n *node, code uint32, depth int, m []symbol, sptrs *symptrs) {
 		return
 	}
 
-	walk(n.child[0], code<<1, depth+1, m, sptrs)
-	walk(n.child[1], (code<<1)|1, depth+1, m, sptrs)
+	walk(n.child[0], depth+1, m, sptrs)
+	walk(n.child[1], depth+1, m, sptrs)
 }
 
 func (e *Encoder) SymbolLen(s uint32) int {
