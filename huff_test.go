@@ -39,7 +39,12 @@ func TestRoundtrip(t *testing.T) {
 
 	t.Logf("%d -> %d\n", len(data), len(compressed))
 
-	d := e.Decoder()
+	cbb := e.CodebookBytes()
+
+	d, err := NewDecoder(cbb)
+	if err != nil {
+		t.Fatalf("error roundtripping codebook")
+	}
 
 	br := bitstream.NewReader(bytes.NewReader(compressed))
 

@@ -180,6 +180,11 @@ func (e *Encoder) Writer(w io.Writer) *Writer {
 	return &Writer{e: e, BitWriter: bitstream.NewWriter(w)}
 }
 
+func (e *Encoder) CodebookBytes() []byte {
+	b, _ := e.m.MarshalBinary()
+	return b
+}
+
 type Writer struct {
 	e *Encoder
 	*bitstream.BitWriter
@@ -216,6 +221,22 @@ func (e *Encoder) Decoder() *Decoder {
 		numl: e.numl,
 		sym:  e.sym,
 	}
+}
+
+func NewDecoder(cb []byte) (*Decoder, error) {
+	var c codebook
+	if err := c.UnmarshalBinary(cb); err != nil {
+		return nil, err
+	}
+
+	sptrs, numl := c.calculateCodes()
+
+	eof := uint32(len(c)) - 1
+	return &Decoder{
+		eof:  eof,
+		numl: numl,
+		sym:  sptrs,
+	}, nil
 }
 
 func (d *Decoder) ReadSymbol(br *bitstream.BitReader) (uint32, error) {
