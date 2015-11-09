@@ -188,6 +188,7 @@ func (e *Encoder) CodebookBytes() []byte {
 type Writer struct {
 	e *Encoder
 	*bitstream.BitWriter
+	closed bool
 }
 
 var ErrUnknownSymbol = errors.New("huff: unknown symbol")
@@ -207,6 +208,13 @@ func (w *Writer) WriteSymbol(s uint32) (int, error) {
 	w.BitWriter.WriteBits(uint64(sym.Code), sym.Len)
 
 	return sym.Len, nil
+}
+
+func (w *Writer) Close() {
+	if w.closed {
+		return
+	}
+	w.Flush(bitstream.Zero)
 }
 
 type Decoder struct {

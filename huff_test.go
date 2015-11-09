@@ -34,6 +34,7 @@ func TestRoundtrip(t *testing.T) {
 		w.WriteSymbol(uint32(v))
 	}
 	w.WriteSymbol(EOF)
+	w.Close()
 
 	compressed := b.Bytes()
 
@@ -52,7 +53,11 @@ func TestRoundtrip(t *testing.T) {
 
 	for {
 		b, err := d.ReadSymbol(br)
-		if b == EOF || err == io.EOF {
+		if err == io.EOF {
+			t.Errorf("got io.EOF instead of EOF symbol")
+			return
+		}
+		if b == EOF {
 			break
 		}
 		uncompressed = append(uncompressed, byte(b))
