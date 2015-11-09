@@ -220,7 +220,7 @@ func (w *Writer) Close() {
 type Decoder struct {
 	eof  uint32
 	numl []uint32
-	sym  []*symbol
+	sym  symptrs
 }
 
 func (e *Encoder) Decoder() *Decoder {
