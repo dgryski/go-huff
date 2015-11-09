@@ -155,7 +155,6 @@ func (w *Writer) WriteSymbol(s uint32) (int, error) {
 
 type Decoder struct {
 	*bitstream.BitReader
-	m    []symbol
 	eof  uint32
 	numl []uint32
 	sym  []*symbol
@@ -164,7 +163,6 @@ type Decoder struct {
 func (e *Encoder) Decoder(r io.Reader) *Decoder {
 	return &Decoder{
 		BitReader: bitstream.NewReader(r),
-		m:         e.m,
 		eof:       e.eof,
 		numl:      e.numl,
 		sym:       e.sym,
