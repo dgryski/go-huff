@@ -118,6 +118,10 @@ func (e *Encoder) SymbolLen(s uint32) int {
 		s = e.eof
 	}
 
+	if s < 0 || s >= uint32(len(e.m)) {
+		return 0
+	}
+
 	return e.m[s].Len
 }
 
