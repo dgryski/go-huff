@@ -5,6 +5,8 @@ import (
 	"io"
 	"io/ioutil"
 	"testing"
+
+	"github.com/dgryski/go-bitstream"
 )
 
 func TestRoundtrip(t *testing.T) {
@@ -37,12 +39,14 @@ func TestRoundtrip(t *testing.T) {
 
 	t.Logf("%d -> %d\n", len(data), len(compressed))
 
-	d := e.Decoder(bytes.NewReader(compressed))
+	d := e.Decoder()
+
+	br := bitstream.NewReader(bytes.NewReader(compressed))
 
 	var uncompressed []byte
 
 	for {
-		b, err := d.ReadSymbol()
+		b, err := d.ReadSymbol(br)
 		if b == EOF || err == io.EOF {
 			break
 		}

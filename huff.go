@@ -154,27 +154,25 @@ func (w *Writer) WriteSymbol(s uint32) (int, error) {
 }
 
 type Decoder struct {
-	*bitstream.BitReader
 	eof  uint32
 	numl []uint32
 	sym  []*symbol
 }
 
-func (e *Encoder) Decoder(r io.Reader) *Decoder {
+func (e *Encoder) Decoder() *Decoder {
 	return &Decoder{
-		BitReader: bitstream.NewReader(r),
-		eof:       e.eof,
-		numl:      e.numl,
-		sym:       e.sym,
+		eof:  e.eof,
+		numl: e.numl,
+		sym:  e.sym,
 	}
 }
 
-func (d *Decoder) ReadSymbol() (uint32, error) {
+func (d *Decoder) ReadSymbol(br *bitstream.BitReader) (uint32, error) {
 	var offset uint32
 	var code uint32
 
 	for i := 0; i < len(d.numl); i++ {
-		b, err := d.ReadBit()
+		b, err := br.ReadBit()
 		if err != nil {
 			return 0, err
 		}
