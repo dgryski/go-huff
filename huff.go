@@ -18,6 +18,33 @@ type symbol struct {
 	Len  int
 }
 
+type codebook []symbol
+
+func (c codebook) calculateCodes() (symptrs, []uint32) {
+	var sptrs symptrs
+	for i := range c {
+		if c[i].Len != 0 {
+			sptrs = append(sptrs, &c[i])
+		}
+	}
+	sort.Sort(sptrs)
+
+	var code uint32
+	numl := make([]uint32, sptrs[len(sptrs)-1].Len+1)
+	prevlen := -1
+	for i := range sptrs {
+		if sptrs[i].Len > prevlen {
+			code <<= uint(sptrs[i].Len - prevlen)
+			prevlen = sptrs[i].Len
+		}
+		numl[sptrs[i].Len]++
+		sptrs[i].Code = code
+		code++
+	}
+
+	return sptrs, numl
+}
+
 type node struct {
 	weight int
 	child  [2]*node
@@ -50,7 +77,7 @@ func (s symptrs) Less(i, j int) bool {
 
 type Encoder struct {
 	eof  uint32
-	m    []symbol
+	m    codebook
 	sym  symptrs
 	numl []uint32
 }
@@ -74,34 +101,15 @@ func NewEncoder(counts []int) *Encoder {
 		heap.Push(&n, node{weight: n1.weight + n2.weight, child: [2]*node{&n2, &n1}})
 	}
 
-	m := make([]symbol, eof+1)
+	m := make(codebook, eof+1)
 	walk(&n[0], 0, m)
 
-	var sptrs symptrs
-	for i := range m {
-		if m[i].Len != 0 {
-			sptrs = append(sptrs, &m[i])
-		}
-	}
-	sort.Sort(sptrs)
-
-	var code uint32
-	numl := make([]uint32, sptrs[len(sptrs)-1].Len+1)
-	prevlen := -1
-	for i := range sptrs {
-		if sptrs[i].Len > prevlen {
-			code <<= uint(sptrs[i].Len - prevlen)
-			prevlen = sptrs[i].Len
-		}
-		numl[sptrs[i].Len]++
-		sptrs[i].Code = code
-		code++
-	}
+	sptrs, numl := m.calculateCodes()
 
 	return &Encoder{eof: eof, m: m, sym: sptrs, numl: numl}
 }
 
-func walk(n *node, depth int, m []symbol) {
+func walk(n *node, depth int, m codebook) {
 
 	if n.leaf {
 		m[n.sym] = symbol{s: n.sym, Len: depth}
