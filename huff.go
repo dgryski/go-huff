@@ -15,9 +15,9 @@ import (
 var EOF uint32 = 0xffffffff
 
 type symbol struct {
-	s    uint32
-	Code uint32
-	Len  int
+	s      uint32
+	code   uint32
+	length int
 }
 
 type codebook []symbol
@@ -25,22 +25,22 @@ type codebook []symbol
 func (c codebook) calculateCodes() (symptrs, []uint32) {
 	var sptrs symptrs
 	for i := range c {
-		if c[i].Len != 0 {
+		if c[i].length != 0 {
 			sptrs = append(sptrs, &c[i])
 		}
 	}
 	sort.Sort(sptrs)
 
 	var code uint32
-	numl := make([]uint32, sptrs[len(sptrs)-1].Len+1)
+	numl := make([]uint32, sptrs[len(sptrs)-1].length+1)
 	prevlen := -1
 	for i := range sptrs {
-		if sptrs[i].Len > prevlen {
-			code <<= uint(sptrs[i].Len - prevlen)
-			prevlen = sptrs[i].Len
+		if sptrs[i].length > prevlen {
+			code <<= uint(sptrs[i].length - prevlen)
+			prevlen = sptrs[i].length
 		}
-		numl[sptrs[i].Len]++
-		sptrs[i].Code = code
+		numl[sptrs[i].length]++
+		sptrs[i].code = code
 		code++
 	}
 
@@ -56,7 +56,7 @@ func (c codebook) MarshalBinary() ([]byte, error) {
 	b = append(b, vbuf[:l]...)
 
 	for i := range c {
-		l := binary.PutVarint(vbuf[:], int64(c[i].Len))
+		l := binary.PutVarint(vbuf[:], int64(c[i].length))
 		b = append(b, vbuf[:l]...)
 	}
 
@@ -82,7 +82,7 @@ func (c *codebook) UnmarshalBinary(data []byte) error {
 		if err != nil {
 			return ErrInvalidCodebook
 		}
-		(*c)[i] = symbol{s: i, Len: int(clen)}
+		(*c)[i] = symbol{s: i, length: int(clen)}
 	}
 
 	return nil
@@ -115,7 +115,7 @@ type symptrs []*symbol
 func (s symptrs) Len() int      { return len(s) }
 func (s symptrs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s symptrs) Less(i, j int) bool {
-	return s[i].Len < s[j].Len || s[i].Len == s[j].Len && s[i].s < s[j].s
+	return s[i].length < s[j].length || s[i].length == s[j].length && s[i].s < s[j].s
 }
 
 type Encoder struct {
@@ -155,7 +155,7 @@ func NewEncoder(counts []int) *Encoder {
 func walk(n *node, depth int, m codebook) {
 
 	if n.leaf {
-		m[n.sym] = symbol{s: n.sym, Len: depth}
+		m[n.sym] = symbol{s: n.sym, length: depth}
 		return
 	}
 
@@ -173,7 +173,7 @@ func (e *Encoder) SymbolLen(s uint32) int {
 		return 0
 	}
 
-	return e.m[s].Len
+	return e.m[s].length
 }
 
 func (e *Encoder) Writer(w io.Writer) *Writer {
@@ -205,9 +205,9 @@ func (w *Writer) WriteSymbol(s uint32) (int, error) {
 
 	sym := w.e.m[s]
 
-	w.WriteBits(uint64(sym.Code), sym.Len)
+	w.WriteBits(uint64(sym.code), sym.length)
 
-	return sym.Len, nil
+	return sym.length, nil
 }
 
 func (w *Writer) Close() {
@@ -263,7 +263,7 @@ func (d *Decoder) ReadSymbol(br *bitstream.BitReader) (uint32, error) {
 		}
 
 		offset += d.numl[i]
-		first := d.sym[offset].Code
+		first := d.sym[offset].code
 
 		if code-first < d.numl[i+1] {
 			s := d.sym[code-first+offset].s
